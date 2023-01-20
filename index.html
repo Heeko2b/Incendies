@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="./echarts.css" rel="stylesheet" />
+    <title>Document</title>
+  </head>
+  <body>
+    <header>
+      <h1>
+        Analyse des feux de forêt en Corse
+      </h1>
+    </header>
+    <main>
+      <section>
+        <div>
+          <h2>
+            Des incendies de plus en plus importants
+          </h2>
+          <p>
+            La Corse est une région particulièrement sujette aux incendies
+            notamment à cause des fortes températures qui sont enregistrées
+            chaque été sur l'île, ce qui est propice aux départs de feu. On peut
+            remarquer une forte augmentation de la surface de l'île touchée par
+            des incendies à partir de 2017, en partie à cause de deux incendies
+            d'origine criminels qui ont causé de gros dégâts. Les deux années
+            suivantes ont été plus calmes, même si on constate qu'il y a eu
+            presque le double d'hectares brûlés par rapport à 2016. L'année 2020
+            à vu une importante augmentation des hectares brûlés par rapport a
+            2019, mais est très loin du record atteint en 2017.
+          </p>
+        </div>
+        <div class="droite">
+          <div id="chart1" style="width: 80%; height: 400px;"></div>
+        </div>
+      </section>
+      <div class="paragraphe">
+        <h2>
+          Comparaison des feux entre la Haute-Corse et la Corse du sud
+        </h2>
+        <p>
+          On peut constater grâce aux graphiques ci-dessous que la Haute-Corse
+          est généralement plus touchée par les incendies, que ce soit en terme
+          de nombre ou de surface brûlé. Mise à part 2010 et 2018, la
+          Haute-Corse a toujours recensé plus de départs d'incendies que la
+          Corse du sud au cours de cette décennie, et son nombre d'hectares
+          incendiés a toujours été supérieur à celui de la Corse du sud sauf en
+          2020.
+        </p>
+      </div>
+      <section class="deux">
+        <div id="chart2" style="width: 80%; height: 400px;"></div>
+        <div id="chart3" style="width: 80%; height: 400px;"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.js"></script>
+    <script>
+      fetch("./incendies.json")
+        .then((response) => response.json())
+        .then((json) => {
+          const myChart = echarts.init(document.querySelector("#chart1"));
+          const surfaceParAnnee = json.reduce((acc, curr) => {
+            const annee = curr["Année"];
+            const surface = curr["Surface parcourue (m2)"];
+            if (!acc[annee]) {
+              acc[annee] = 0;
+            }
+            acc[annee] += surface / 10000;
+            return acc;
+          }, {});
+          console.log(surfaceParAnnee);
+
+          const option = {
+            title: { text: "Surface brûlée en km²" },
+            tooltip: {
+              trigger: "axis",
+              axisPointer: {
+                type: "shadow"
+              }
+            },
+            xAxis: {
+              type: "category",
+              data: Object.keys(surfaceParAnnee)
+            },
+            yAxis: {
+              name: "Surface (ha)",
+              type: "value"
+            },
+            series: [
+              {
+                data: Object.values(surfaceParAnnee).map((item) =>
+                  item.toFixed(2)
+                ),
+                type: "bar"
+              }
+            ]
+          };
+          myChart.setOption(option);
+        });
+
+      const startYear = 2010;
+      const endYear = 2020;
+      fetch("./incendies.json")
+        .then((response) => response.json())
+        .then((json) => {
+          const myChart = echarts.init(document.querySelector("#chart2"));
+
+          const filteredData = json.filter(
+            (item) => item["Année"] >= startYear && item["Année"] <= endYear
+          );
+
+          const groupByDepartmentYear = filteredData.reduce((acc, current) => {
+            if (!acc[current["Département"]]) {
+              acc[current["Département"]] = {};
+            }
+            if (!acc[current["Département"]][current["Année"]]) {
+              acc[current["Département"]][current["Année"]] = 0;
+            }
+            acc[current["Département"]][current["Année"]]++;
+            return acc;
+          }, {});
+
+          const series = Object.keys(groupByDepartmentYear).map(
+            (department) => {
+              return {
+                name: department,
+                type: "bar",
+                data: Object.keys(groupByDepartmentYear[department]).map(
+                  (year) => groupByDepartmentYear[department][year]
+                )
+              };
+            }
+          );
+
+          const option = {
+            title: { text: "Nombre d'incendies par département" },
+            legend: { bottom: "bottom" },
+            tooltip: {},
+            xAxis: {
+              type: "category",
+              data: Object.keys(groupByDepartmentYear["2A"])
+            },
+            yAxis: {},
+            series: series
+          };
+          myChart.setOption(option);
+        });
+
+      fetch("./incendies.json")
+        .then((response) => response.json())
+        .then((json) => {
+          const myChart = echarts.init(document.querySelector("#chart3"));
+
+          const filteredData = json.filter(
+            (item) => item["Année"] >= startYear && item["Année"] <= endYear
+          );
+
+          const groupByDepartmentYear = filteredData.reduce((acc, current) => {
+            if (!acc[current["Département"]]) {
+              acc[current["Département"]] = {};
+            }
+            if (!acc[current["Département"]][current["Année"]]) {
+              acc[current["Département"]][current["Année"]] = 0;
+            }
+            acc[current["Département"]][current["Année"]] +=
+              current["Surface parcourue (m2)"];
+            return acc;
+          }, {});
+
+          const series = Object.keys(groupByDepartmentYear).map(
+            (department) => {
+              return {
+                name: department,
+                type: "line",
+                lineStyle: {
+                  width: 2,
+                  type: "solid"
+                },
+                data: Object.keys(
+                  groupByDepartmentYear[department]
+                ).map((year) =>
+                  (groupByDepartmentYear[department][year] / 10000).toFixed(2)
+                )
+              };
+            }
+          );
+
+          const option = {
+            title: { text: "Surface incendiée par département" },
+            legend: { bottom: "bottom" },
+            tooltip: {},
+            xAxis: {
+              type: "category",
+              data: Object.keys(groupByDepartmentYear["2A"])
+            },
+            yAxis: {
+              name: "   Surface (ha)"
+            },
+            series: series
+          };
+          myChart.setOption(option);
+        });
+    </script>
+  </body>
+</html>
